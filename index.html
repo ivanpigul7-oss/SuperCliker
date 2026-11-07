@@ -1,0 +1,1056 @@
+<!-- ... existing code ... -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кликер Монет</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            transition: background 0.8s ease; /* Плавная смена фона */
+        }
+
+        /* Dynamic Background Themes */
+        body.theme-normal {
+            background-color: #000000;
+        }
+
+        body.theme-light-blue {
+            background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+        }
+
+        body.theme-orange {
+            background: linear-gradient(180deg, #f97316 0%, #c2410c 100%);
+        }
+
+        body.theme-gold {
+            background: linear-gradient(180deg, #eab308 0%, #ca8a04 50%, #854d0e 100%);
+        }
+
+        body.theme-blue-rain {
+            background: linear-gradient(180deg, #0284c7 0%, #0f172a 100%);
+        }
+
+        body.theme-gold-rain {
+            background: linear-gradient(180deg, #78350f 0%, #451a03 50%, #000000 100%);
+        }
+
+        /* Falling money animation */
+        @keyframes fall {
+            0% {
+                transform: translateY(-50px) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(105vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .falling-item {
+            position: fixed;
+            top: -50px;
+            pointer-events: none;
+            z-index: 1;
+            animation: fall linear forwards;
+        }
+
+        /* Floating +X text animation */
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, 0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -80px) scale(1.2);
+            }
+        }
+
+        .modal-drop-down {
+            animation: dropDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* Floating +X text animation */
+        @keyframes floatUp {
+            0% {
+                opacity: 1;
+                transform: translate(-50%, 0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -80px) scale(1.2);
+        }
+    }
+
+    /* Top drop animation for modals */
+    @keyframes dropDown {
+        0% {
+            opacity: 0;
+            transform: translateY(-50px) scale(0.95);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .modal-drop-down {
+        animation: dropDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    .floating-text {
+        position: absolute;
+            pointer-events: none;
+            animation: floatUp 0.8s ease-out forwards;
+            z-index: 50;
+        }
+
+        /* Gold Coin Shadow Effect */
+        .coin-glow {
+            filter: drop-shadow(0 0 25px rgba(245, 158, 11, 0.4));
+        }
+
+        /* Custom active pulse on press */
+        .coin-btn:active {
+            transform: scale(0.92);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between items-center p-4 overflow-hidden relative select-none">
+
+    <!-- Main Start Menu Overlay -->
+    <div id="start-menu" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center">
+        <!-- Background decorative pulse -->
+        <div class="absolute w-72 h-72 bg-amber-500/10 rounded-full blur-3xl -z-10 pointer-events-none"></div>
+
+        <div class="flex flex-col items-center gap-4 max-w-xs w-full">
+            <!-- Icon / Title -->
+            <div class="w-24 h-24 rounded-full bg-gradient-to-br from-amber-300 via-amber-500 to-amber-600 border-4 border-amber-200 shadow-2xl flex items-center justify-center animate-bounce mb-2">
+                <span class="text-5xl">🪙</span>
+            </div>
+
+            <h1 class="text-4xl font-black tracking-tight text-amber-400 drop-shadow-md">
+                КЛИКЕР МОНЕТ
+            </h1>
+            <p class="text-xs text-slate-400 font-medium">
+                Кликай, зарабатывай монеты, меняй их на доллары и стань лидером рейтинга!
+            </p>
+
+            <!-- Nickname Input Row -->
+            <div class="w-full flex items-center gap-2 mt-2 bg-slate-900/80 border border-slate-700 focus-within:border-amber-400 rounded-2xl p-2.5 transition-colors">
+                <label for="username-input" class="text-xs font-bold text-slate-300 shrink-0">Никнейм:</label>
+                <input id="username-input" type="text" placeholder="Введите ваш ник..." maxlength="15" class="w-full bg-transparent text-amber-400 font-bold text-xs outline-none placeholder-slate-500">
+            </div>
+
+            <!-- Buttons Stack -->
+            <div class="w-full flex flex-col gap-2 mt-1">
+                <button id="start-game-btn" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-4 rounded-2xl text-lg shadow-xl transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2">
+                    <span>▶️</span> ИГРАТЬ
+                </button>
+                
+                <!-- Error Warning Message (Placed directly below Play Button) -->
+                <div id="menu-error-msg" class="text-xs text-rose-500 font-bold hidden animate-pulse py-1">
+                    Нужно вписать никнейм!
+                </div>
+            </div>
+
+            <!-- Footer Stats Hint -->
+            <div id="menu-save-info" class="text-[11px] text-slate-500 font-semibold mt-1">
+                Прогресс сохраняется автоматически 💾
+            </div>
+        </div>
+    </div>
+
+    <!-- Background decorative blur blobs -->
+    <!-- Top-Left Action Buttons (Leaderboard, Dollar Info & Settings) -->
+    <div class="absolute top-6 left-6 z-20 flex items-center gap-2">
+        <button id="leaderboard-btn" class="w-12 h-12 bg-slate-900/80 hover:bg-slate-800/90 border border-amber-500/30 rounded-2xl flex items-center justify-center text-2xl shadow-lg transition-transform active:scale-95 cursor-pointer">
+            🏆
+        </button>
+        <button id="dollar-btn" class="w-12 h-12 bg-slate-900/80 hover:bg-slate-800/90 border border-emerald-500/30 rounded-2xl flex items-center justify-center text-2xl shadow-lg transition-transform active:scale-95 cursor-pointer">
+            💵
+        </button>
+        <button id="settings-btn" class="w-12 h-12 bg-slate-900/80 hover:bg-slate-800/90 border border-purple-500/30 rounded-2xl flex items-center justify-center text-2xl shadow-lg transition-transform active:scale-95 cursor-pointer">
+            ⚙️
+        </button>
+    </div>
+
+    <!-- 1. TOP: Coins Display Only -->
+    <header class="w-full max-w-xs pt-8 text-center z-10 flex flex-col items-center">
+        <div class="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-1">Ваш Баланс</div>
+        <div class="flex items-center justify-center gap-3">
+            <span class="text-4xl text-amber-400">🪙</span>
+            <span id="coins-display" class="text-5xl font-black text-amber-400 tracking-tight drop-shadow-md">0</span>
+        </div>
+    </header>
+
+    <!-- 2. CENTER: Main Interactive Click Button -->
+    <main class="my-auto flex items-center justify-center z-10 py-6">
+        <button id="click-btn" class="coin-btn coin-glow w-44 h-44 sm:w-52 sm:h-52 rounded-full bg-gradient-to-br from-amber-300 via-amber-500 to-amber-600 border-4 border-amber-200 shadow-2xl flex items-center justify-center transition-transform cursor-pointer hover:scale-105 active:scale-90 focus:outline-none">
+            <span class="text-7xl sm:text-8xl drop-shadow-lg transform hover:rotate-6 transition-transform">🪙</span>
+        </button>
+    </main>
+
+    <!-- 3. BOTTOM: Compact Upgrade Buttons under the Clicker -->
+    <footer class="w-full max-w-xs pb-6 z-10 flex flex-col items-center gap-3">
+        <!-- Upgrade Click Power -->
+        <button id="buy-upgrade-btn" class="w-full bg-slate-900 hover:bg-slate-800 border border-amber-500/30 hover:border-amber-500/60 p-3 rounded-2xl shadow-lg flex items-center justify-between text-left transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed group">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg font-bold group-hover:scale-105 transition-transform">
+                    ⚡
+                </div>
+                <div>
+                    <div class="font-bold text-sm text-slate-100">Улучшить клик</div>
+                    <div id="upgrade-power-desc" class="text-[11px] text-slate-400">x1.5 к клику</div>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="font-bold text-amber-400 text-sm flex items-center justify-end gap-1">
+                    <span id="upgrade-cost">15</span> 🪙
+                </div>
+                <span class="text-[10px] text-slate-400 block">Купить</span>
+            </div>
+        </button>
+
+        <!-- Auto-Bot Upgrade -->
+        <button id="buy-bot-btn" class="w-full bg-slate-900 hover:bg-slate-800 border border-blue-500/30 hover:border-blue-500/60 p-3 rounded-2xl shadow-lg flex items-center justify-between text-left transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed group">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-lg font-bold group-hover:scale-105 transition-transform">
+                    🤖
+                </div>
+                <div>
+                    <div class="font-bold text-sm text-slate-100">Авто-бот</div>
+                    <div class="text-[11px] text-slate-400">+5 раз в 2 сек</div>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="font-bold text-amber-400 text-sm flex items-center justify-end gap-1">
+                    <span id="bot-cost">20</span> 🪙
+                </div>
+                <span class="text-[10px] text-slate-400 block">Ур. <span id="bot-level">0</span></span>
+            </div>
+        </button>
+
+        <!-- Mega-Click Upgrade -->
+        <button id="buy-megaclick-btn" class="w-full bg-slate-900 hover:bg-slate-800 border border-purple-500/30 hover:border-purple-500/60 p-3 rounded-2xl shadow-lg flex items-center justify-between text-left transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed group">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg font-bold group-hover:scale-105 transition-transform">
+                    💥
+                </div>
+                <div>
+                    <div class="font-bold text-sm text-slate-100">Мегаклик</div>
+                    <div id="megaclick-desc" class="text-[11px] text-slate-400">х2 к клику за каждый 3-й клик</div>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="font-bold text-amber-400 text-sm flex items-center justify-end gap-1">
+                    <span id="megaclick-cost">50</span> 🪙
+                </div>
+                <span id="megaclick-status" class="text-[10px] text-slate-400 block">Купить</span>
+            </div>
+        </button>
+
+        <button id="reset-btn" class="text-xs text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1.5 pt-1">
+            🔄 Сбросить прогресс
+        </button>
+    </footer>
+
+    <!-- Anti-Autoclicker Warning Modal Overlay -->
+    <div id="autoclicker-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-rose-500/50 rounded-3xl p-6 w-full max-w-xs shadow-2xl relative flex flex-col items-center gap-3 text-center modal-drop-down">
+            <span class="text-5xl">⚠️</span>
+            <h2 class="text-xl font-black text-rose-500">Автокликер обнаружен!</h2>
+            <p class="text-xs text-slate-300 font-medium leading-relaxed">
+                Вы делаете больше <span class="font-bold text-amber-400">10 кликов в секунду</span>. Пожалуйста, играйте честно и не используйте сторонние программы!
+            </p>
+            <button id="close-autoclicker-btn" class="w-full mt-2 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg transition-transform active:scale-95 cursor-pointer">
+                Понятно, больше не буду
+            </button>
+        </div>
+    </div>
+
+    <!-- Autoclicker Temp Ban Modal Overlay (60 seconds) -->
+    <div id="ban-modal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-lg z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-red-600 rounded-3xl p-6 w-full max-w-xs shadow-2xl relative flex flex-col items-center gap-3 text-center modal-drop-down">
+            <span class="text-6xl animate-pulse">🚫</span>
+            <h2 class="text-xl font-black text-red-500">Доступ заблокирован!</h2>
+            <p class="text-xs text-slate-300 font-medium leading-relaxed">
+                Вы проигнорировали <span class="font-bold text-amber-400">5 предупреждений</span> за использование автокликера.
+            </p>
+            
+            <div class="bg-slate-800/80 border border-red-500/30 rounded-2xl p-3 w-full my-1">
+                <div class="text-[11px] text-slate-400 uppercase tracking-widest font-bold">Разблокировка через</div>
+                <div id="ban-timer-display" class="text-3xl font-black text-red-400 mt-1 font-mono">01:00</div>
+            </div>
+
+            <p class="text-[11px] text-slate-500">
+                Пожалуйста, отключайте сторонний софт перед продолжением игры.
+            </p>
+        </div>
+    </div>
+
+    <!-- Leaderboard Modal Overlay -->
+    <div id="leaderboard-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700/60 rounded-3xl p-6 w-full max-w-sm shadow-2xl relative flex flex-col gap-4">
+            <!-- Header -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">🏆</span>
+                    <h2 class="text-lg font-bold text-amber-400">Таблица лидеров (Топ 50)</h2>
+                </div>
+                <button id="close-leaderboard-btn" class="text-slate-400 hover:text-slate-100 text-xl font-bold w-8 h-8 rounded-full flex items-center justify-center bg-slate-800 cursor-pointer">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Players List with Scrollbar -->
+            <div id="leaderboard-list" class="flex flex-col gap-2 max-h-96 overflow-y-auto pr-1 select-none">
+                <!-- Dynamically populated leaderboard items -->
+            </div>
+
+            <!-- Footer note -->
+            <div class="text-[11px] text-center text-slate-500 pt-1 border-t border-slate-800">
+                Ваш прогресс обновляется автоматически!
+            </div>
+        </div>
+    </div>
+
+    <!-- Dollar Rate Modal Overlay -->
+    <div id="dollar-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-emerald-500/40 rounded-3xl p-6 w-full max-w-xs shadow-2xl relative flex flex-col gap-4 text-center">
+            <!-- Header -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">💵</span>
+                    <h2 class="text-lg font-bold text-emerald-400">Обмен валюты</h2>
+                </div>
+                <button id="close-dollar-btn" class="text-slate-400 hover:text-slate-100 text-xl font-bold w-8 h-8 rounded-full flex items-center justify-center bg-slate-800">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="bg-slate-800/60 border border-emerald-500/20 rounded-2xl p-4 flex flex-col items-center gap-3">
+                <div id="exchange-rate-display" class="flex items-center justify-center gap-2 text-xl font-black">
+                    <span class="text-amber-400">100 🪙</span>
+                    <span class="text-slate-400 text-lg">=</span>
+                    <span class="text-emerald-400">1 💵</span>
+                </div>
+
+                <!-- Mode Switcher (Coins -> Dollars OR Dollars -> Coins) -->
+                <button id="swap-mode-btn" class="w-full bg-slate-800 hover:bg-slate-700 border border-emerald-500/30 rounded-xl py-1.5 px-3 text-xs font-bold text-slate-200 flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer">
+                    <span id="swap-mode-text">🪙 Монеты ➔ 💵 Доллары</span>
+                    <span class="text-emerald-400 text-sm">🔄</span>
+                </button>
+
+                <!-- Input for exchange -->
+                <div class="w-full flex flex-col gap-1 text-left mt-1">
+                    <label id="exchange-input-label" class="text-[11px] text-slate-400 font-semibold">Впишите монеты для обмена:</label>
+                    <div class="relative">
+                        <input id="exchange-input" type="number" min="0" placeholder="0" class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-amber-400 font-bold text-sm outline-none transition-colors">
+                        <span id="exchange-input-icon" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">🪙</span>
+                    </div>
+                </div>
+
+                <!-- Preview calculation -->
+                <div class="w-full bg-slate-900/60 rounded-xl p-2.5 flex items-center justify-between text-xs">
+                    <span class="text-slate-400">Вы получите:</span>
+                    <span id="exchange-preview" class="font-extrabold text-emerald-400">$0</span>
+                </div>
+
+                <!-- Exchange button -->
+                <button id="exchange-submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-xl text-xs shadow-lg transition-transform active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+                    Обменять
+                </button>
+            </div>
+
+            <!-- Player Balances Info -->
+            <div class="text-xs text-slate-400 flex flex-col gap-1 px-1">
+                <div class="flex justify-between items-center">
+                    <span>Ваши монеты:</span>
+                    <span id="modal-coins-display" class="font-extrabold text-amber-400 text-xs">0 🪙</span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span>Ваши доллары:</span>
+                    <span id="player-dollars-display" class="font-extrabold text-emerald-400 text-sm">$0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal Overlay -->
+    <div id="settings-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-purple-500/40 rounded-3xl p-6 w-full max-w-xs shadow-2xl relative flex flex-col gap-4 text-center">
+            <!-- Header -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-2xl">⚙️</span>
+                    <h2 class="text-lg font-bold text-purple-400">Настройки</h2>
+                </div>
+                <button id="close-settings-btn" class="text-slate-400 hover:text-slate-100 text-xl font-bold w-8 h-8 rounded-full flex items-center justify-center bg-slate-800">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="bg-slate-800/60 border border-purple-500/20 rounded-2xl p-4 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-xl">🔊</span>
+                    <span class="font-bold text-sm text-slate-100">Звуковые эффекты</span>
+                </div>
+                <button id="sound-toggle-btn" class="px-3 py-1.5 rounded-xl font-bold text-xs border transition-all active:scale-95 cursor-pointer bg-emerald-500/20 border-emerald-500/50 text-emerald-400">
+                    ВКЛ
+                </button>
+            </div>
+
+            <!-- Promo Code Section -->
+            <div class="bg-slate-800/60 border border-purple-500/20 rounded-2xl p-3 flex flex-col gap-2">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="font-bold text-xs text-slate-200 shrink-0">Промокод</span>
+                    <input id="promo-input" type="text" placeholder="Ввести код..." class="w-full bg-slate-900 border border-slate-700 focus:border-purple-500 rounded-xl px-2.5 py-1.5 text-slate-100 text-xs outline-none transition-colors uppercase font-mono">
+                    <button id="promo-submit-btn" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition-transform active:scale-95 cursor-pointer shrink-0">
+                        ОК
+                    </button>
+                </div>
+                <div id="promo-message" class="text-[11px] hidden font-semibold"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game State Variables
+        let state = {
+            username: '',
+            coins: 0,
+            dollars: 0,
+            clickPower: 1,
+            upgradeCost: 15,
+            botLevel: 0,
+            botCost: 20,
+            hasMegaClick: false,
+            megaClickCost: 50,
+            soundEnabled: true,
+            usedPromos: []
+        };
+
+        // Counter for MegaClick tracking
+        let clickCounterForBonus = 0;
+
+        // Exchange Mode: 'coins_to_dollars' OR 'dollars_to_coins'
+        let exchangeMode = 'coins_to_dollars';
+        let currentTheme = 'normal';
+        let moneyRainInterval = null;
+
+        // Generate 49 Bot Players starting from $15,000 down to $10
+        const botNamesList = [
+            "МагнатКлик", "CryptoKing", "ЗолотойДракон", "Алхимик", "БыстрыйПалец",
+            "МонетныйБарон", "КликПовелитель", "СуперФармер", "БиткоинБосс", "Генри_Форд",
+            "Клик_Ниндзя", "ФармМашина", "ГолдМейкер", "КапитанКлик", "Олигарх99",
+            "Фортуна", "ГолодныйВолк", "Император", "Фармер2000", "КликСнайпер",
+            "Миллионер", "Счастливчик", "Топ_Кликер", "Богач_777", "ГолдРаш",
+            "ПроФармер", "АлмазныйКлик", "КликТорнадо", "МаниМейкер", "КиберКлик",
+            "КликМастер", "ФармПро", "ЗолотойЛев", "Абсолют", "Инвестор",
+            "СпидКликер", "ГигаКлик", "ФармКороль", "КликВизард", "Партизан",
+            "ТеневойМагнат", "СтальнойПалец", "КликБоец", "ГолдХантер", "ТопИгрок",
+            "ФармГениец", "КликТитан", "МонетныйШейх", "Новичок_007"
+        ];
+
+        const mockBots = [];
+        let currentBotDollars = 15000;
+        for (let i = 0; i < botNamesList.length; i++) {
+            let botDollars = 10;
+            
+            // Топ 22 бота имеют разные балансы от $15,000 до $10.20
+            if (i === 0) {
+                botDollars = 15000;
+            } else if (i < 5) {
+                currentBotDollars -= Math.floor(Math.random() * 2000) + 1500;
+                botDollars = Math.max(1000, currentBotDollars);
+            } else if (i < 22) {
+                currentBotDollars -= Math.floor(Math.random() * 300) + 100;
+                botDollars = Math.max(15, currentBotDollars);
+            } else {
+                // Начиная с 23-го места (индекс 22 и ниже) баланс плавно спадает вниз от 10.00 со шагом в 20 центов (9.80, 9.60 и т.д.)
+                const offset = i - 22;
+                botDollars = Math.max(0.50, 10.00 - (offset * 0.20));
+            }
+
+            mockBots.push({
+                name: botNamesList[i],
+                dollars: botDollars
+            });
+        }
+
+        // DOM Elements
+        const coinsDisplay = document.getElementById('coins-display');
+        const clickBtn = document.getElementById('click-btn');
+        const buyUpgradeBtn = document.getElementById('buy-upgrade-btn');
+        const upgradeCostEl = document.getElementById('upgrade-cost');
+        const buyBotBtn = document.getElementById('buy-bot-btn');
+        const botCostEl = document.getElementById('bot-cost');
+        const botLevelEl = document.getElementById('bot-level');
+        const buyMegaclickBtn = document.getElementById('buy-megaclick-btn');
+        const megaclickCostEl = document.getElementById('megaclick-cost');
+        const megaclickStatusEl = document.getElementById('megaclick-status');
+        const megaclickDescEl = document.getElementById('megaclick-desc');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // Modals
+        const startMenu = document.getElementById('start-menu');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const usernameInput = document.getElementById('username-input');
+        const menuErrorMsg = document.getElementById('menu-error-msg');
+
+        const autoclickerModal = document.getElementById('autoclicker-modal');
+        const closeAutoclickerBtn = document.getElementById('close-autoclicker-btn');
+
+        const banModal = document.getElementById('ban-modal');
+        const banTimerDisplay = document.getElementById('ban-timer-display');
+
+        const leaderboardBtn = document.getElementById('leaderboard-btn');
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        const closeLeaderboardBtn = document.getElementById('close-leaderboard-btn');
+        const leaderboardList = document.getElementById('leaderboard-list');
+
+        const dollarBtn = document.getElementById('dollar-btn');
+        const dollarModal = document.getElementById('dollar-modal');
+        const closeDollarBtn = document.getElementById('close-dollar-btn');
+        const playerDollarsDisplay = document.getElementById('player-dollars-display');
+        const modalCoinsDisplay = document.getElementById('modal-coins-display');
+        const exchangeInput = document.getElementById('exchange-input');
+        const exchangePreview = document.getElementById('exchange-preview');
+        const exchangeSubmitBtn = document.getElementById('exchange-submit-btn');
+        const swapModeBtn = document.getElementById('swap-mode-btn');
+        const swapModeText = document.getElementById('swap-mode-text');
+        const exchangeInputLabel = document.getElementById('exchange-input-label');
+        const exchangeInputIcon = document.getElementById('exchange-input-icon');
+        const exchangeRateDisplay = document.getElementById('exchange-rate-display');
+
+        const settingsBtn = document.getElementById('settings-btn');
+        const settingsModal = document.getElementById('settings-modal');
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+        const soundToggleBtn = document.getElementById('sound-toggle-btn');
+        const promoInput = document.getElementById('promo-input');
+        const promoSubmitBtn = document.getElementById('promo-submit-btn');
+        const promoMessage = document.getElementById('promo-message');
+
+        // Anti-autoclicker tracking
+        let clickTimestamps = [];
+        let autoclickerWarningsCount = 0;
+        let isBanned = false;
+        let banTimerInterval = null;
+
+        // Sound Web Audio API Synthetic Beeps
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSound(freq = 440, type = 'sine', duration = 0.08) {
+            if (!state.soundEnabled) return;
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        // Initialize App & Events
+        function init() {
+            loadGame();
+
+            // Check if username already exists
+            if (state.username && state.username.trim() !== '') {
+                usernameInput.value = state.username;
+            }
+
+            // Start Game Button Event Listener
+            startGameBtn.addEventListener('click', () => {
+                const val = usernameInput.value.trim();
+                if (!val) {
+                    menuErrorMsg.classList.remove('hidden');
+                    playSound(200, 'square', 0.2);
+                    return;
+                }
+                menuErrorMsg.classList.add('hidden');
+                state.username = val;
+                saveGame();
+                startMenu.classList.add('hidden');
+                playSound(587, 'sine', 0.15);
+            });
+
+            usernameInput.addEventListener('input', () => {
+                if (usernameInput.value.trim()) {
+                    menuErrorMsg.classList.add('hidden');
+                }
+            });
+
+            // Click Coin Event
+            clickBtn.addEventListener('click', (e) => {
+                if (isBanned) return;
+
+                // Anti-autoclicker check
+                const now = Date.now();
+                clickTimestamps.push(now);
+                clickTimestamps = clickTimestamps.filter(t => now - t <= 1000);
+
+                if (clickTimestamps.length > 10) {
+                    clickTimestamps = [];
+                    triggerAutoclickerWarning();
+                    return;
+                }
+
+                clickCounterForBonus++;
+                let earned = state.clickPower;
+                let isBonus = false;
+
+                // Check MegaClick Trigger (Every 3rd click x2)
+                if (state.hasMegaClick && clickCounterForBonus % 3 === 0) {
+                    earned = state.clickPower * 2;
+                    isBonus = true;
+                }
+
+                state.coins += earned;
+                playSound(isBonus ? 880 : 523, 'sine', 0.08);
+                createFloatingText(e, `+${earned}${isBonus ? ' 💥' : ''}`, isBonus ? '#c084fc' : '#fbbf24');
+                updateUI();
+                saveGame();
+            });
+
+            // Buy Click Upgrade
+            buyUpgradeBtn.addEventListener('click', () => {
+                if (state.coins >= state.upgradeCost) {
+                    state.coins -= state.upgradeCost;
+                    state.clickPower = Math.ceil(state.clickPower * 1.5);
+                    state.upgradeCost = Math.round(state.upgradeCost * 2.2);
+                    playSound(659, 'triangle', 0.12);
+                    updateUI();
+                    saveGame();
+                }
+            });
+
+            // Buy Bot Upgrade
+            buyBotBtn.addEventListener('click', () => {
+                if (state.coins >= state.botCost) {
+                    state.coins -= state.botCost;
+                    state.botLevel++;
+                    state.botCost = Math.round(state.botCost * 2.5);
+                    playSound(659, 'triangle', 0.12);
+                    updateUI();
+                    saveGame();
+                }
+            });
+
+            // Buy MegaClick
+            buyMegaclickBtn.addEventListener('click', () => {
+                if (!state.hasMegaClick && state.coins >= state.megaClickCost) {
+                    state.coins -= state.megaClickCost;
+                    state.hasMegaClick = true;
+                    playSound(880, 'sine', 0.2);
+                    updateUI();
+                    saveGame();
+                }
+            });
+
+            // Auto-bot Interval (Adds coins every 2s)
+            setInterval(() => {
+                if (state.botLevel > 0 && !isBanned) {
+                    state.coins += state.botLevel * 5;
+                    updateUI();
+                    saveGame();
+                }
+            }, 2000);
+
+            // Modals Toggle Listeners
+            leaderboardBtn.addEventListener('click', () => {
+                renderLeaderboard();
+                leaderboardModal.classList.remove('hidden');
+                playSound(440, 'sine', 0.05);
+            });
+            closeLeaderboardBtn.addEventListener('click', () => {
+                leaderboardModal.classList.add('hidden');
+            });
+
+            dollarBtn.addEventListener('click', () => {
+                exchangeInput.value = '';
+                updateExchangePreview();
+                dollarModal.classList.remove('hidden');
+                playSound(440, 'sine', 0.05);
+            });
+            closeDollarBtn.addEventListener('click', () => {
+                dollarModal.classList.add('hidden');
+            });
+
+            settingsBtn.addEventListener('click', () => {
+                settingsModal.classList.remove('hidden');
+                playSound(440, 'sine', 0.05);
+            });
+            closeSettingsBtn.addEventListener('click', () => {
+                settingsModal.classList.add('hidden');
+            });
+
+            // Exchange currency submit
+            swapModeBtn.addEventListener('click', () => {
+                if (exchangeMode === 'coins_to_dollars') {
+                    exchangeMode = 'dollars_to_coins';
+                    swapModeText.textContent = '💵 Доллары ➔ 🪙 Монеты';
+                    exchangeInputLabel.textContent = 'Впишите доллары для обмена:';
+                    exchangeInputIcon.textContent = '💵';
+                    exchangeRateDisplay.innerHTML = '<span class="text-emerald-400">1 💵</span> <span class="text-slate-400 text-lg">=</span> <span class="text-amber-400">100 🪙</span>';
+                } else {
+                    exchangeMode = 'coins_to_dollars';
+                    swapModeText.textContent = '🪙 Монеты ➔ 💵 Доллары';
+                    exchangeInputLabel.textContent = 'Впишите монеты для обмена:';
+                    exchangeInputIcon.textContent = '🪙';
+                    exchangeRateDisplay.innerHTML = '<span class="text-amber-400">100 🪙</span> <span class="text-slate-400 text-lg">=</span> <span class="text-emerald-400">1 💵</span>';
+                }
+                exchangeInput.value = '';
+                updateExchangePreview();
+            });
+
+            exchangeInput.addEventListener('input', updateExchangePreview);
+
+            exchangeSubmitBtn.addEventListener('click', () => {
+                const amount = parseFloat(exchangeInput.value);
+                if (isNaN(amount) || amount <= 0) return;
+
+                if (exchangeMode === 'coins_to_dollars') {
+                    if (state.coins >= amount) {
+                        state.coins -= amount;
+                        state.dollars += amount / 100;
+                        playSound(784, 'sine', 0.2);
+                        exchangeInput.value = '';
+                        updateExchangePreview();
+                        updateUI();
+                        saveGame();
+                    }
+                } else {
+                    if (state.dollars >= amount) {
+                        state.dollars -= amount;
+                        state.coins += amount * 100;
+                        playSound(784, 'sine', 0.2);
+                        exchangeInput.value = '';
+                        updateExchangePreview();
+                        updateUI();
+                        saveGame();
+                    }
+                }
+            });
+
+            // Sound Toggle
+            soundToggleBtn.addEventListener('click', () => {
+                state.soundEnabled = !state.soundEnabled;
+                soundToggleBtn.textContent = state.soundEnabled ? 'ВКЛ' : 'ВЫКЛ';
+                soundToggleBtn.className = state.soundEnabled
+                    ? 'px-3 py-1.5 rounded-xl font-bold text-xs border transition-all active:scale-95 cursor-pointer bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                    : 'px-3 py-1.5 rounded-xl font-bold text-xs border transition-all active:scale-95 cursor-pointer bg-slate-800 border-slate-700 text-slate-400';
+                saveGame();
+            });
+
+            // Promo code submit
+            promoSubmitBtn.addEventListener('click', () => {
+                const code = promoInput.value.trim().toUpperCase();
+                if (code === 'COIN' && !state.usedPromos.includes('COIN')) {
+                    state.coins += 500;
+                    state.usedPromos.push('COIN');
+                    showPromoMsg('Промокод активирован! +500 🪙', true);
+                    playSound(880, 'triangle', 0.25);
+                } else if (code === 'DOLLAR' && !state.usedPromos.includes('DOLLAR')) {
+                    state.dollars += 50;
+                    state.usedPromos.push('DOLLAR');
+                    showPromoMsg('Промокод активирован! +$50 💵', true);
+                    playSound(880, 'triangle', 0.25);
+                } else if (state.usedPromos.includes(code)) {
+                    showPromoMsg('Этот промокод уже использован!', false);
+                } else {
+                    showPromoMsg('Неверный промокод!', false);
+                }
+                promoInput.value = '';
+                updateUI();
+                saveGame();
+            });
+
+            // Close Warnings
+            closeAutoclickerBtn.addEventListener('click', () => {
+                autoclickerModal.classList.add('hidden');
+            });
+
+            // Reset Game
+            resetBtn.addEventListener('click', () => {
+                if (confirm('Сбросить весь имеющийся прогресс в игре?')) {
+                    localStorage.removeItem('coin_clicker_save');
+                    state = {
+                        username: '',
+                        coins: 0,
+                        dollars: 0,
+                        clickPower: 1,
+                        upgradeCost: 15,
+                        botLevel: 0,
+                        botCost: 20,
+                        hasMegaClick: false,
+                        megaClickCost: 50,
+                        soundEnabled: true,
+                        usedPromos: []
+                    };
+                    clickCounterForBonus = 0;
+                    autoclickerWarningsCount = 0;
+                    isBanned = false;
+                    usernameInput.value = '';
+                    startMenu.classList.remove('hidden');
+                    updateUI();
+                }
+            });
+
+            updateUI();
+        }
+
+        // Trigger Autoclicker Warning or Ban
+        function triggerAutoclickerWarning() {
+            autoclickerWarningsCount++;
+            if (autoclickerWarningsCount >= 5) {
+                triggerMinuteBan();
+            } else {
+                autoclickerModal.classList.remove('hidden');
+                playSound(300, 'sawtooth', 0.3);
+            }
+        }
+
+        // 60-Second Temporary Ban Logic
+        function triggerMinuteBan() {
+            autoclickerModal.classList.add('hidden');
+            banModal.classList.remove('hidden');
+            isBanned = true;
+            let timeLeft = 60;
+            banTimerDisplay.textContent = '01:00';
+
+            if (banTimerInterval) clearInterval(banTimerInterval);
+
+            banTimerInterval = setInterval(() => {
+                timeLeft--;
+                const seconds = timeLeft % 60;
+                const secStr = seconds < 10 ? `0${seconds}` : seconds;
+                banTimerDisplay.textContent = `00:${secStr}`;
+
+                if (timeLeft <= 0) {
+                    clearInterval(banTimerInterval);
+                    banModal.classList.add('hidden');
+                    isBanned = false;
+                    autoclickerWarningsCount = 0;
+                    playSound(523, 'sine', 0.2);
+                }
+            }, 1000);
+        }
+
+        function showPromoMsg(msg, success) {
+            promoMessage.textContent = msg;
+            promoMessage.className = `text-[11px] font-semibold ${success ? 'text-emerald-400' : 'text-rose-400'}`;
+            promoMessage.classList.remove('hidden');
+            setTimeout(() => promoMessage.classList.add('hidden'), 3000);
+        }
+
+        function updateExchangePreview() {
+            const val = parseFloat(exchangeInput.value);
+            if (isNaN(val) || val <= 0) {
+                exchangePreview.textContent = exchangeMode === 'coins_to_dollars' ? '$0' : '0 🪙';
+                exchangeSubmitBtn.disabled = true;
+                return;
+            }
+
+            if (exchangeMode === 'coins_to_dollars') {
+                const res = val / 100;
+                exchangePreview.textContent = `$${res.toFixed(2)}`;
+                exchangeSubmitBtn.disabled = val > state.coins;
+            } else {
+                const res = val * 100;
+                exchangePreview.textContent = `${res} 🪙`;
+                exchangeSubmitBtn.disabled = val > state.dollars;
+            }
+        }
+
+        function createFloatingText(e, text, color = '#fbbf24') {
+            const el = document.createElement('div');
+            el.className = 'floating-text font-black text-xl pointer-events-none drop-shadow-md';
+            el.style.color = color;
+            el.textContent = text;
+            
+            const rect = clickBtn.getBoundingClientRect();
+            const x = e ? e.clientX : rect.left + rect.width / 2;
+            const y = e ? e.clientY : rect.top + rect.height / 2;
+
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        }
+
+        // Leaderboard Generation
+        function renderLeaderboard() {
+            const allPlayers = [...mockBots];
+
+            // Filter out existing bot if same name as player
+            const myName = state.username || 'Вы';
+            const existingIdx = allPlayers.findIndex(b => b.name === myName);
+            if (existingIdx !== -1) {
+                allPlayers.splice(existingIdx, 1);
+            }
+
+            allPlayers.push({
+                name: myName,
+                dollars: state.dollars,
+                isPlayer: true
+            });
+
+            // Sort by dollars descending
+            allPlayers.sort((a, b) => b.dollars - a.dollars);
+
+            leaderboardList.innerHTML = '';
+
+            allPlayers.slice(0, 50).forEach((item, index) => {
+                const rank = index + 1;
+                const isTop1 = rank === 1;
+                const row = document.createElement('div');
+
+                row.className = `flex items-center justify-between p-3 rounded-2xl border ${
+                    item.isPlayer 
+                        ? 'bg-amber-500/10 border-amber-500/50 text-amber-300' 
+                        : isTop1 
+                            ? 'bg-amber-500/20 border-amber-400 text-amber-200 font-bold'
+                            : 'bg-slate-800/60 border-slate-700/50 text-slate-200'
+                }`;
+
+                let rankBadge = `<span class="w-6 text-center text-xs font-black text-slate-400">${rank}</span>`;
+                if (rank === 2) rankBadge = `<span class="w-6 text-center text-sm">🥈</span>`;
+                if (rank === 3) rankBadge = `<span class="w-6 text-center text-sm">🥉</span>`;
+
+                // Clean existing crown if any
+                const cleanName = item.name.replace(' 👑', '');
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-2.5 truncate">
+                        ${rankBadge}
+                        <span class="text-xs font-bold truncate">
+                            ${cleanName}${isTop1 ? ' <span class="animate-pulse">👑</span>' : ''} ${item.isPlayer ? '<span class="text-[10px] text-amber-400 font-semibold">(Вы)</span>' : ''}
+                        </span>
+                    </div>
+                    <div class="text-xs font-black text-emerald-400 shrink-0">
+                        $${item.dollars.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                `;
+
+                leaderboardList.appendChild(row);
+            });
+        }
+
+        // Dynamic Backgrounds Progression
+        function updateThemeAndEffects() {
+            let targetTheme = 'normal';
+            let rainType = null;
+
+            if (state.coins >= 1000000 || state.dollars >= 10000) {
+                targetTheme = 'gold-rain';
+                rainType = 'gold';
+            } else if (state.coins >= 100000) {
+                targetTheme = 'blue-rain';
+                rainType = 'blue';
+            } else if (state.coins >= 10000) {
+                targetTheme = 'gold';
+            } else if (state.coins >= 1000) {
+                targetTheme = 'orange';
+            } else if (state.coins >= 100) {
+                targetTheme = 'light-blue';
+            } else {
+                targetTheme = 'normal';
+            }
+
+            if (currentTheme !== targetTheme) {
+                document.body.className = `theme-${targetTheme} text-slate-100 min-h-screen flex flex-col justify-between items-center p-4 overflow-hidden relative select-none`;
+                currentTheme = targetTheme;
+            }
+
+            // Money Rain Spawner
+            if (rainType) {
+                if (!moneyRainInterval) {
+                    moneyRainInterval = setInterval(() => spawnFallingItem(rainType), 400);
+                }
+            } else {
+                if (moneyRainInterval) {
+                    clearInterval(moneyRainInterval);
+                    moneyRainInterval = null;
+                }
+            }
+        }
+
+        function spawnFallingItem(type) {
+            const item = document.createElement('div');
+            item.className = 'falling-item text-2xl';
+            item.textContent = type === 'gold' ? (Math.random() > 0.5 ? '🪙' : '💰') : '💵';
+            item.style.left = `${Math.random() * 95}vw`;
+            item.style.animationDuration = `${Math.random() * 2 + 2}s`;
+            document.body.appendChild(item);
+            setTimeout(() => item.remove(), 4000);
+        }
+
+        function updateUI() {
+            coinsDisplay.textContent = Math.floor(state.coins).toLocaleString();
+            upgradeCostEl.textContent = Math.floor(state.upgradeCost).toLocaleString();
+            botCostEl.textContent = Math.floor(state.botCost).toLocaleString();
+            botLevelEl.textContent = state.botLevel;
+
+            // Buy Upgrade Enable Check
+            buyUpgradeBtn.disabled = state.coins < state.upgradeCost;
+            buyBotBtn.disabled = state.coins < state.botCost;
+
+            // MegaClick Upgrade Button UI
+            if (state.hasMegaClick) {
+                megaclickCostEl.textContent = 'КУПЛЕНО';
+                megaclickStatusEl.textContent = 'Активен';
+                buyMegaclickBtn.disabled = true;
+                buyMegaclickBtn.classList.add('opacity-75');
+            } else {
+                megaclickCostEl.textContent = '50';
+                megaclickStatusEl.textContent = 'Купить';
+                buyMegaclickBtn.disabled = state.coins < state.megaClickCost;
+                buyMegaclickBtn.classList.remove('opacity-75');
+            }
+
+            modalCoinsDisplay.textContent = `${Math.floor(state.coins).toLocaleString()} 🪙`;
+            playerDollarsDisplay.textContent = `$${state.dollars.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            updateThemeAndEffects();
+        }
+
+        function saveGame() {
+            localStorage.setItem('coin_clicker_save', JSON.stringify(state));
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem('coin_clicker_save');
+            if (saved) {
+                try {
+                    const loaded = JSON.parse(saved);
+                    state = { ...state, ...loaded };
+                } catch (e) {}
+            }
+        }
+
+        // Start initialization on page load
+        window.onload = function() {
+            init();
+        };
+    </script>
+</body>
+</html>
